@@ -1,0 +1,11 @@
+setuptools
+numpy
+scikit-learn
+matplotlib
+torch
+setuptools
+nltk
+pandas
+scipy
+tqdm
+jupyterlab
