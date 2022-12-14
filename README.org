@@ -10,9 +10,71 @@ The task is the creation of a language model using:
 
 *DATASET*
 
-[[https://deepai.org/dataset/penn-treebank][Penn Tree Bank]]
+[[https://deepai.org/dataset/penn-treebank][Penn TreeBank]]
 
 *BASELINE*
 
 - Vanilla: 140 PP
 - LSTM: 90.7 PP
+
+  
+** Dataset description
+Penn Treebank (PTB) is a dataset maintained by the university of Pennsylvania, there are over four millions and eight hundred thousand annotated words in it, and maybe most important, all of them are corrected by humans.
+
+There are different kinds of annotations inside the dataset, such as:
+- piece-of-speech
+- syntactic skeletons
+- semantic skeletons
+
+The dataset is composed by a total of $49199$ sentences and $1036580$ divided into three split: train, validation, and test. In table [[tbl:dataset-split]] it is shown the split ratio between the three parts.
+
+#+NAME: tbl:dataset-split
+|            | Sentences |  Words | Sentences split ratio | Words split ratio |
+|------------+-----------+--------+-----------------------+-------------------|
+| Train      |     42068 | 887521 |                 85.50 |             85.62 |
+| Validation |      3370 |  70390 |                  6.84 |              6.79 |
+| Test       |      3761 |  78669 |                  7.64 |              7.58 |
+
+Fortunately validation and test splits do not contain word that are not inside the train split, this simply the embedding management for /Unknown/ term during the problem formulation.
+
+*** Most/Least frequent words
+In table [[tbl:most-frequent-words]] and [[tbl:least-frequent-words]] are presented respectively the most and least frequent words in various splits.
+
+#+NAME: tbl:most-frequent-words
+| Words most frequent | Train word - count | Validation word - count | Test word - count |
+|---------------------+--------------------+-------------------------+-------------------|
+|                   1 | the - 50770        | the - 4122              | - 4794            |
+|                   2 | - 45020            | - 3485                  | the - 4529        |
+|                   3 | N - 32481          | N - 2603                | N - 2523          |
+|                   4 | of - 24400         | of - 1832               | of - 2195         |
+|                   5 | to - 23638         | to - 1750               | to - 2042         |
+|                   6 | a - 21196          | a - 1738                | a - 1821          |
+|                   7 | in - 18000         | in - 1392               | in - 1640         |
+|                   8 | and - 17474        | and - 1391              | and - 1539        |
+|                   9 | 's - 9784          | 's - 868                | 's - 903          |
+|                  10 | that - 8931        | for - 726               | that - 831        |
+
+#+NAME: tbl:least-frequent-words
+| Words least frequent | Train word - count | Validation word - count | Test word - count |
+|----------------------+--------------------+-------------------------+-------------------|
+|                    1 | isi - 1            | okla. - 1               | engine - 1        |
+|                    2 | daewoo - 1         | tens - 1                | jitters - 1       |
+|                    3 | mlx - 1            | est - 1                 | innocent - 1      |
+|                    4 | gitano - 1         | population - 1          | reinforce - 1     |
+|                    5 | centrust - 1       | clinical - 1            | swiss - 1         |
+|                    6 | memotec - 1        | labels - 1              | replacing - 1     |
+|                    7 | ipo - 1            | characterized - 1       | execution - 1     |
+|                    8 | banknote - 1       | byrd - 1                | embassy - 1       |
+|                    9 | cluett - 1         | loaded - 1              | unveiled - 1      |
+|                   10 | biscuits - 1       | contested - 1           | tentatively - 1   |
+
+The table that shows the least frequent words are pretty useless given the fact that many words appear once. The most frequent table instead shows that the dataset is enough balanced across splits.
+
+*** Sentence lengths
+In figure [[fig:sentence_lengths]] is analyzed the distribution of sentence lengths across different splits.
+
+#+NAME: fig:sentence_lengths
+#+ATTR_ORG: :width 450px
+[[file:./assets/sentence_lengths_distribution.png]]
+
+It is interesting to notice that the mean length is shared, this suggests that the split was made following this criteria.

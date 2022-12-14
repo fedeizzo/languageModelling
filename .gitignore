@@ -145,3 +145,5 @@ cython_debug/
 
 # PROJECT
 data
+ltximg
+**/.ipynb_checkpoints
