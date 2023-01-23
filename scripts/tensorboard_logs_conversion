@@ -1,0 +1,6 @@
+#!/bin/sh
+for version in {0..116}; do
+    echo $version
+    mkdir -p converted/version_$version
+    ./tflogs2pandas.py ../lightning_logs/lightning_logs/version_$version --write-csv -o converted/version_$version/
+done

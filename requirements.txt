@@ -8,4 +8,8 @@ nltk
 pandas
 scipy
 tqdm
+pyyaml
 jupyterlab
+pytorch-lightning
+tensorboard
+pytorch-nlp

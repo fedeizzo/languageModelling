@@ -147,3 +147,15 @@ cython_debug/
 data
 ltximg
 **/.ipynb_checkpoints
+.aim
+lightning_logs
+
+report/*.bbl
+report/*.synctex.gz
+report/*.tex
+report/ltximg
+report/auto
+scripts/converted
+test_embedding_maps.json
+test_results.pkl
+test_results_old.pkl

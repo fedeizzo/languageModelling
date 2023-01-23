@@ -1,0 +1,101 @@
+task: train
+logging_level: ERROR
+precomputed_filename: ./data/precomputed_dataset.pkl
+model: MogrifyLSTM
+seed: 0
+early_stopper: true
+gradient_clipping_val: 0.25
+use_bptt: true
+bptt_steps: 3
+
+LSTM:
+  lstm_size: 400
+  embedding_dim: 400
+  num_layers: 3
+  dropout: 0
+  tie_embedding_weights: true
+  epochs: 200
+  batch_size: 32
+  optimizer: SGD
+  criterion: CrossEntropy
+  use_lr_scheduler: true
+  regularization: ["WeightsInitialization", "EmbeddingDropout", "WeightDrop", "LockedDropout"]
+  embedding_dropout: 0.2
+  input_output_dropout: 0.3
+  hidden_dropout: 0.2
+
+  ASGD:
+    lr: 0.1
+    lambd: 0
+    t0: 0
+    weight_decay: 0.000001
+    patience: 2
+
+  SGD:
+    lr: 1
+    momentum: 0.9
+
+  Adam:
+    lr: 0.005
+    betas_1: 0
+    betas_2: 0.999
+    weight_decay: 0.00025
+
+  CrossEntropy:
+    none: 0
+
+MogrifyLSTM:
+  lstm_size: 512
+  embedding_dim: 512
+  mogrify_steps: 5
+  dropout: 0.5
+  tie_embedding_weights: true
+  epochs: 50
+  batch_size: 16
+  optimizer: Adam
+  criterion: CrossEntropy
+  use_lr_scheduler: true
+  regularization: ["WeightsInitialization", "EmbeddingDropout"]
+  embedding_dropout: 0.1
+  input_output_dropout: 0.4
+  hidden_dropout: 0.5
+
+  ASGD:
+    lr: 0.1
+    lambd: 0
+    t0: 0
+    weight_decay: 0.000001
+
+  SGD:
+    lr: 0.1
+    momentum: 0.9
+
+  Adam:
+    lr: 0.005
+    betas_1: 0
+    betas_2: 0.999
+    weight_decay: 0.00025
+
+  CrossEntropy:
+    none: 0
+
+GRU:
+  gru_size: 300
+  embedding_dim: 300
+  num_layers: 3
+  dropout: 0.5
+  tie_embedding_weights: true
+  epochs: 50
+  batch_size: 64
+  optimizer: SGD
+  criterion: CrossEntropy
+
+  SGD:
+    lr: 0.1
+    momentum: 0.9
+
+  Adam:
+    lr: 0.0001
+
+  CrossEntropy:
+    none: 0

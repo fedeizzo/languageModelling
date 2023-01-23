@@ -1,0 +1,290 @@
+#+TITLE: Language Modeling with Penn TreeBank Dataset
+#+SUBTITLE: A deep learning approach
+#+AUTHOR: Federico Izzo (229316)
+#+EMAIL: federico.izzo@studenti.unitn.it
+#+DATE: {{{time(%Y-%m-%d)}}}
+#+DESCRIPTION: Natural Language Understanding project course.
+#+KEYWORDS: NLU, DL, UniTN, LSTM, RNN, GRU
+#+LANGUAGE: en
+#+BIBLIOGRAPHY: bibliography.bib
+#+CLS_STYLE: IEEEtran.bst
+#+latex_class: article
+#+latex_class_options: [a4paper]
+#+latex_title_command: \maketitle
+#+LATEX_HEADER: \usepackage{INTERSPEECH2021}
+#+LATEX_HEADER: \usepackage{cleveref}
+#+LATEX_HEADER: \usepackage{graphics}
+#+LATEX_HEADER: \graphicspath{assets}
+#+OPTIONS: toc:nil f:t
+
+
+#+begin_src emacs-lisp :exports results :results none :eval export
+  (make-variable-buffer-local 'org-latex-title-command)
+  (setq org-latex-title-command "
+      \\title{\\LARGE{%t}\\\\
+      \\large{\\textit{%s}}}
+      \\name{%a}
+
+      \\address{University of Trento}
+      \\email{federico.izzo@studenti.unitn.it}
+      \\maketitle")
+#+end_src
+
+* Introduction
+This document aims to summarize the work done for the /Natural Language Understanding (NLU)/ course project, in particular the project involves the creation and test of a model for the language modeling task.
+The directives given by the professor can be divided into several steps:
+1. implement a /State-of-The-Art (SOTA)/ /RNN/[[cite:&mikolovRecurrentNeuralNetwork2010a]] architecture in any python framework;
+2. obtain a baseline score of $144$ /PP/ for a vanilla RNN or $90.7$ /PP/ for a vanilla LSTM using the /Peen Treebank (PTB)/ dataset[[cite:&10.5555/972470.972475]];
+3. try to beat the provided score making some hyper-parametrization or implementing some other /Deep Learning (DL)/ solutions.
+Along with the report, a public available GitHub repository is provided[fn:1].
+
+The best PP value obtain was $86.64$.
+
+* Task formalization
+In the field of /Natural Language Understanding(NLU)/ the task of /Language modeling (LM)/ has the goal of predicting a word given the previous sequence of words contained in the sentence. More formally, it can be viewed as the conditional probability $P$ of token $t_i$ given $t_0, ..., t_{i-1}$ where the final goal is to learn a model $M$ that approximates the function $P$ as close as possible:
+
+\begin{equation}
+P(t_i|t_{1},\dots,t_{i-1}) \approx M(t_i|t_1, \dots, t_{i-1})
+\end{equation}
+
+Language models are employed in a variety of domains, such as speech recognition, machine translation, and captioning.
+Often the LM task is solved using DL techniques that aim to find a minimum for the non-linear function representing the probability function. In the origin, DL solutions were mainly based of RNN in order to allow a variable length input. This brings to very deep structures that suffer of gradient vanishing. To overcome this phenomena a new kind of networks like LSTM[[cite:&LSTM]] and GRU[[cite:&GRU]] were proposed.
+
+The current SOTA for LM is based on transformers[[cite:&https://doi.org/10.48550/arxiv.1706.03762]].
+
+[fn:1] https://github.com/fedeizzo/languageModelling
+
+* Data Description Analysis
+As already introduced in section [[Introduction]] the dataset used is Peen Treebank, a common benchmark for language modeling.
+
+Penn Treebank (PTB) is a dataset maintained by the university of Pennsylvania, there are over four millions and eight hundred thousand annotated words in it, and maybe most important, all of them are corrected by humans.
+
+There are different kind of annotations inside the dataset, such as:
+- piece-of-speech
+- syntactic skeletons
+- semantic skeletons
+
+The dataset is composed by a total of $49199$ sentences and $1036580$ words, for at total vocabulary length of $10000$, divided into three splits: train, validation, and test
+
+In table [[tbl:dataset-split]] it is shown the split ratio between the three parts.
+
+#+NAME: tbl:dataset-split
+#+CAPTION: Dataset split.
+#+ATTR_LATEX: :align lrrrr
+|-------+-----------+--------+-------------+-------------|
+|       | Sentences |  Words | Sent. split | Words split |
+|-------+-----------+--------+-------------+-------------|
+| Train |     42068 | 887521 |       85.50 |       85.62 |
+| Val   |      3370 |  70390 |        6.84 |        6.79 |
+| Test  |      3761 |  78669 |        7.64 |        7.58 |
+|-------+-----------+--------+-------------+-------------|
+
+Fortunately validation and test splits do not contain words that are not inside the train split, this simplifies the embedding management for /Unknown/ term during the problem formulation.
+
+The $5$ most frequent words are presented in table [[tbl:most-frequent-words]] (words are shared across all three splits):
+
+#+NAME: tbl:most-frequent-words
+#+CAPTION: Most frequent words.
+|---+-------+-------+--------------|
+|   | Word  | Count | % over total |
+|---+-------+-------+--------------|
+| 1 | The   | 59421 |          5.7 |
+| 2 | <unk> | 53299 |          5.1 |
+| 3 | N     | 37607 |          3.6 |
+| 4 | of    | 28427 |          2.7 |
+| 5 | to    | 27430 |          2.6 |
+|---+-------+-------+--------------|
+
+The presence of /<unk>/ and /N/ are straightforward because they respectively represent unknown elements and digits.
+
+Figure [[fig:sentence-lengths-distribution]] shows sentence length distributions for all splits. 
+
+#+NAME: fig:sentence-lengths-distribution
+#+CAPTION: Sentence lengths distribution.
+[[file:./assets/sentence_lengths_distribution.pdf]]
+
+The mean values are almost identical, this implies that the length of the RNN is constant over the training, validation, and testing phases, consequentially any kind of operation applied on top of the train split should behave in a similar way on other splits.
+
+* Model
+The following section explains the adopted pipeline for the dataset creation and model formulations.
+
+** Pipeline
+In order to train a RNN model some dataset manipulation is required, the implemented steps are summarized in the following list:
+1. the original dataset is loaded from file;
+2. a /<EOS>/ token is append to each sentence to identify the end of sentence;
+3. each unique word is mapped to an integer number;
+4. a custom collate function is defined, this allows to have the same length for all sentences, this is done using a common pad value ignored during the loss computation.
+
+** Architecture
+The baseline model is a plain LSTM structure. The forward is divided into a sequence of steps:
+- the input of the model is a list of integers representing a sentence;
+- each word in the sentence is mapped to a vector space using a learnable embedding layer;
+- the embedded input is then used by the recurrent structure that takes elements from $t_0$ to $t_{i-1}$ to predict $t_{i}$;
+- finally the output of the LSTM is fed to a fully connect layer that gives the class probability for each word.
+
+Once the required PP value was reached a Mogrifier LSTM architecture[[cite:&Melis2020Mogrifier]] was tested, this is a enhanced version of a canonical LSTM in which the hidden element of the step $t_{i-1}$ is used as a gate for the input of step $t$.
+
+** Overfitting
+From the first run it was clear that the model suffers of overfitting (figure [[fig:baseline-overfitting]]), for this reason an incremental approach was used to add several well known techniques for overfitting avoidance[[cite:&https://doi.org/10.48550/arxiv.1708.02182]]:
+- /Learning rate scheduler/: a tool that controls the impact of a single train update changing the learning rate dynamically, in particular a /ReduceLROnPlateau/ scheduler was used, it requires a patience within which the validation loss should decrease, if not the scheduler kicks-in decreasing the learning rate;
+- /Early Stopper/: it stops the training when the validation loss starts to increase;
+- /Weights initialization/: hidden layers initialization before training;
+- /Parameter Tying/: it aggregates embedding and classification layer parameters to reduce the model complexity and find a common representation;
+- /Embedding dropout/: a modified version of an embedding layer that includes dropout[fn:2];
+- /Weight dropout/: a dropout applied on a LSTM model[fn:3];
+- /Locked dropout/: a layer that allows to shutdown neurons in a consistent way across repeated connections within the forward and backward pass;
+- /Gradient clipping/: a technique that can be used to avoid a phenomena called /"exploding gradient"/.
+
+#+NAME: fig:baseline-overfitting
+#+CAPTION: Baseline overfitting.
+[[file:../assets/baseline_lstm_overfitting.pdf]]
+
+** Optimizer
+Three different optimizers were tested:
+- /Stochastic Gradient Descent/: after many epochs it stagnates;
+- /Non-monotonically Triggered ASGD/: an optimized version of SGD capable of taking mean values from SGD to reduce noise and gives a solution closer to the optimum;
+- /ADAM/: reaches better result than SGD and ASGD in less time when used in combination with Mogrifier LSTM.
+
+Moreover, several tests were made also using /Truncated Back-Propagation Through Time (TBPTT)/[[cite:&https://doi.org/10.48550/arxiv.1705.08209]].
+
+[fn:2] [[https://github.com/carpedm20/ENAS-pytorch/blob/0468b8c4ddcf540c9ed6f80c27289792ff9118c9/models/shared_rnn.py#L51][embeddig dropout source]]
+[fn:3] [[https://pytorchnlp.readthedocs.io/en/latest/_modules/torchnlp/nn/weight_drop.html][weight dropout source]] 
+
+# 5. your network/algorithm (focus on your solution)
+# 6. the pipeline if used any, including tokenizer, featurizer, extractor, etc.
+# 7. your baseline and the experiments you have tried
+
+* Evaluation
+This section contains metrics used for the evaluation phase and explains different experiments.
+
+** Metrics
+The task was addressed as a classification problem where the output of the model is a vector and each cell represents the probability of the $i\text{-th}$ word. The /Cross Entropy (CE)/ was the objective function used to learn parameters of the model
+
+#+NAME: eq:cross-entropy
+\begin{equation}
+CE(S) = -\frac{1}{N}\sum_{i=1}^N \sum_{j=1}^C y_{ij} log f_{\theta}(x_ij)
+\label{eq:cross-entropy}
+\end{equation}
+
+where:
+- $S$ is a sequence of words;
+- $N$ is the number of elements in the batch;
+- $C$ is the total number of classes.
+
+An additional metric was used to assess model performances, it is the /Per word Perplexity (PP)/ defined on top of the $CE$ loss
+
+#+NAME: eq:perplexity
+\begin{equation}
+PP(x, y) = e^{CE(\{x, y\})}
+\label{eq:perplexity}
+\end{equation}
+
+The final goal is to find a set of parameters that minimizes the PP value:
+
+$$
+\theta^{*} = \text{argmin}_{\theta} PP(X, Y)
+$$
+# - metric used
+# - results on evaluation that you performed
+# - comparison and difference between your model and the baseline
+# - correct interpretation of errors and analysis
+
+** Results
+The first idea was to create a baseline LSTM model that can be used later to make comparisons with enhanced implementations. No technique was used to avoid overfitting, and as expected performance on the train split is higher than the one on validation split (figure [[fig:baseline-overfitting]]).
+
+The second experiment focused on regularization techniques presented in the section [[Overfitting]], different combinations have been tested and at the end the best achieved result, presented in figure [[fig:lstm-all]], was obtained using all regularization tools except weight dropout.
+Even if the general performance reached a better result with respect to the baseline, after the 50-th epoch the validation loss stops to decrease while the training one keeps a descending behavior.
+
+#+NAME: fig:lstm-all
+#+CAPTION: LSTM with regularization.
+[[file:../assets/lstm_all.pdf]]
+
+At the first moment I thought the problem was related to low model capacity, for this reason I decided to increase the depth and the size of the model. The increased capacity of the model allowed to "embed" training data directly within the model parameters. In order to overcome this problem my next step was
+- the increase of the dropout value to avoid the new overfitting effect;
+- the increase starting learning rate which was controlled by the learning rate scheduler.
+  
+This updates aimed to align more the validation curve to the training one. Unfortunately, from figure [[fig:lstm-all-refined]] it is possible to notice that the overfitting phenomena was reduced but still present.
+
+#+NAME: fig:lstm-all-refined
+#+CAPTION: LSTM all refined.
+[[file:../assets/lstm_all_refined.pdf]]
+
+At this point the most effective regularization techniques were used, further tests were made on top of the Mogrifier architecture using Adam as optimizer.
+
+#+NAME: fig:mogrifier
+#+CAPTION: Mogrifier.
+[[file:../assets/mogrifier.pdf]]
+
+This model structure is capable of learning better and in a faster way but at the same time the generalization capabilities are very poor, as shown in figure [[fig:mogrifier]].
+
+Technically speaking the Mogrifier structure has all elements to allow the learning of a good representation capable of obtaining low perplexity values, but the overfitting phenomena remains the main problem even if regularization techniques are used.
+
+** Predictions analysis
+A more in depth analysis on top of predicted words of the test split was made with respect to the LSTM model presented in figure [[fig:lstm-all]]. One tested element was the correlation between the effectiveness of the model and the length of the sentence. It was proved that sequence models implemented using DL tends to decrease the perplexity value with long sequences. In figure [[fig:pp-sentence-len]] it is possible to notice a stable behavior across words at different position in the sentence, except ones around the 60-th position of the sequence.
+
+#+NAME: fig:pp-sentence-len
+#+CAPTION: PP and sentence lengths correlation.
+[[file:../assets/pp_sentence_length.pdf]]
+
+I think that this is not correlated to the problem previously discussed but instead it could be a consequence of the low presence of words around that specific position as shown in the right subplot.
+
+#+NAME: tbl:most-correct-words
+#+CAPTION: Most correct words.
+|-------+---------------------+-------------------|
+| Word  | Correctly predicted | Total occurrences |
+|-------+---------------------+-------------------|
+| the   |                2761 |              3968 |
+| <eos> |                2671 |              3761 |
+| <unk> |                2214 |              4606 |
+| N     |                1757 |              2494 |
+| of    |                1402 |              2182 |
+| to    |                1100 |              2024 |
+| a     |                 478 |              1739 |
+| 's    |                 434 |               903 |
+| in    |                 353 |              1470 |
+|-------+---------------------+-------------------|
+
+From table [[tbl:most-correct-words]] and [[tbl:least-correct-words]] it seems that number of correctly predicted words is correlated with total number of word occurrences. This evidence is strengthened by the fact that most occurred words are shared across dataset splits and consequentially an overfitting behavior results in good performance also in the testing phase.
+
+#+NAME: tbl:least-correct-words
+#+CAPTION: Least correct words.
+|-------------+---------------------+-------------------|
+| Word        | Correctly predicted | Total occurrences |
+|-------------+---------------------+-------------------|
+| acquisition |                   1 |                16 |
+| acquire     |                   1 |                11 |
+| accounts    |                   1 |                 8 |
+| account     |                   1 |                10 |
+| acceptances |                   1 |                 1 |
+| acceptance  |                   1 |                 1 |
+| abortions   |                   1 |                 4 |
+| 1990s       |                   1 |                 3 |
+| 13th        |                   1 |                 9 |
+|-------------+---------------------+-------------------|
+
+#+NAME: tbl:greatest-accuracy-words
+#+CAPTION: Words with greatest accuracy excluding low occurrences.
+|-----------+----------+-------------------|
+| Word      | Accuracy | Total occurrences |
+|-----------+----------+-------------------|
+| jones     |    0.96% |                23 |
+| officer   |    0.94% |                36 |
+| york      |    0.90% |                71 |
+| 'm        |    0.90% |                10 |
+| breakers  |    0.88% |                 8 |
+| mac       |    0.86% |                 7 |
+| lynch     |    0.84% |                19 |
+| be        |    0.84% |               384 |
+|-----------+----------+-------------------|
+
+To finally asses this hypothesis a final experiment was made taking into account the accuracy. From [[tbl:greatest-accuracy-words]] it is clear that words with greatest accuracy values do not necessary have high occurrences in the dataset.
+
+* Conclusion
+Despite good results obtained with LSTM based models the overall human perceived quality is low. The predictions made during the first part of the input sequence are less qualitative accurate than the ones made at the end of the sentence. This could be explained by the fact that some initial words are required to understand and store the context inside the LSTM cell memory.
+Moreover, the prediction analysis made in section [[Predictions analysis]] does not highlight any possible pattern involved in the problem.
+
+Possible future works may be a more depth investigation to improve the perceived quality, or more experiments made to address the overfitting problem associated with Mogrify LSTM.
+
+#+print_bibliography:
+bibliography:/home/fedeizzo/uni/master/projects/languageModelling/report/bibliography.bib
+bibliographystyle:IEEEtran

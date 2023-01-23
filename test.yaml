@@ -1,0 +1,41 @@
+task: test
+logging_level: ERROR
+precomputed_filename: ./data/precomputed_dataset.pkl
+model_checkpoint: lightning_logs/lightning_logs/version_120/checkpoints/epoch=96-step=127458.ckpt
+seed: 0
+model: LSTM
+early_stopper: true
+gradient_clipping_val: 0.25
+use_bptt: true
+bptt_steps: 3
+
+LSTM:
+  ASGD:
+    lambd: 0
+    lr: 0.1
+    t0: 0
+    weight_decay: 1.0e-06
+  Adam:
+    lr: 0.0001
+  CrossEntropy:
+    none: 0
+  SGD:
+    lr: 0.5
+    momentum: 0.9
+  batch_size: 1
+  criterion: CrossEntropy
+  dropout: 0.5
+  embedding_dim: 512
+  embedding_dropout: 0.1
+  epochs: 200
+  hidden_dropout: 0.5
+  input_output_dropout: 0.4
+  lstm_size: 512
+  num_layers: 3
+  optimizer: SGD
+  regularization:
+  - WeightsInitialization
+  - EmbeddingDropout
+  - LockedDropout
+  tie_embedding_weights: true
+  use_lr_scheduler: true

@@ -1,0 +1,6 @@
+task: generate_precomputed
+logging_level: INFO
+train_filename: ./data/ptb.train.txt
+validation_filename: ./data/ptb.valid.txt
+test_filename: ./data/ptb.test.txt
+precomputed_filename: ./data/precomputed_dataset.pkl
