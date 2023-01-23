@@ -21,4 +21,4 @@ The task is the creation of a language model using:
 A complete report can be found [[./report/report.pdf][here]].
 
 ** Scripts
-Tensorboard logs can be parsed using this [[./scripts/tensorboard_logs_conversion][here]], it uses a python utility that can be found [[https://github.com/theRealSuperMario/supermariopy/blob/master/scripts/tflogs2pandas.py][here]].
+Tensorboard logs can be parsed using this [[./scripts/tensorboard_logs_conversion][script]], it uses a python utility that can be found [[https://github.com/theRealSuperMario/supermariopy/blob/master/scripts/tflogs2pandas.py][here]].
