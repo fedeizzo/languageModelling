@@ -31,8 +31,7 @@
 #+end_src
 
 * Introduction
-This document aims to summarize the work done for the /Natural Language Understanding (NLU)/ course project, in particular this required the creation and testing of a model for the language modeling task.
-The main objectives are the following:
+This document illustrates the model created and tested for the language modeling task in order to satisfy the requirements for the /Natural Language Understanding (NLU)/ course project. In particular the main objectives of the assignment are:
 1. implement a /State-of-The-Art (SOTA)/ /RNN/[[cite:&mikolovRecurrentNeuralNetwork2010a]] architecture in any python framework;
 2. obtain a baseline score of $144$ /PP/ for a vanilla RNN or $90.7$ /PP/ for a vanilla LSTM using the /Penn Treebank (PTB)/ dataset[[cite:&10.5555/972470.972475]];
 3. try to improve the provided score making some hyper-parametrization or implementing some other /Deep Learning (DL)/ solutions.
@@ -48,28 +47,25 @@ P(t_i|t_{1},\dots,t_{i-1}) \approx M(t_i|t_1, \dots, t_{i-1})
 \end{equation}
 
 Language models are employed in a variety of domains, such as speech recognition, machine translation, response generation, and captioning.
-Often the LM task is solved using DL techniques that aim to find a minimum for the non-linear function representing the probability function. In the origin, DL solutions were mainly based of RNN in order to allow a variable length input. This brings to very deep structures that suffer of vanishing gradient. To overcome this phenomena a new kind of networks like LSTM[[cite:&LSTM]] and GRU[[cite:&GRU]] were proposed.
+Often the LM task is solved using DL techniques that aim to find a minimum for the non-linear function representing the probability function. In the origin, DL solutions were mainly based of RNN in order to allow a variable length input. This brings to very deep structures that suffer of vanishing gradient. To overcome this phenomenon a new kind of networks like LSTM[[cite:&LSTM]] and GRU[[cite:&GRU]] were proposed.
 
-The current SOTA for LM is based on transformers[[cite:&https://doi.org/10.48550/arxiv.1706.03762]].
+Despite the current SOTA for LM uses transformer-based models[[cite:&https://doi.org/10.48550/arxiv.1706.03762]], this work focuses on LSTM-based architectures as specified in the assignment.
 
 [fn:1] https://github.com/fedeizzo/languageModelling
 
 * Data Description Analysis
-As already introduced in section [[Introduction]] the dataset used is Peen Treebank, a common benchmark for language modeling.
-
-Penn Treebank (PTB) is a dataset maintained by the university of Pennsylvania, there are over four millions and eight hundred thousand annotated words in it, corrected by humans.
-
+As already discussed in section [[Introduction]], Penn Treebank is the dataset used for the model train and evaluation. It is a common benchmark for LM maintained by the university of Pennsylvania, it is characterized by over four millions and eight hundred thousand annotated words in it, all of them corrected by humans.
 There are different kind of annotations inside the dataset, such as:
 - piece-of-speech: labels associated to tokens used for text analysis;
-- syntactic skeletons: structure associated to a sentence that can be used for training or evaluation purposes;
+- syntactic skeletons: structure associated to a sentence useful for training or evaluation purposes;
 - semantic skeletons: as for syntactic skeleton, a structure useful for the LM task learning.
 
-The dataset is composed by a total of $49199$ sentences and $1036580$ words, for a vocabulary size of $10000$ tokens. The dataset is divided into three splits: train, validation, and test.
+The dataset is composed of a total of $49199$ sentences and $1036580$ words, for a vocabulary size of $10000$ tokens. The dataset is divided into three splits: train, validation, and test.
 
 The split ratio between the three parts is shown in table [[tbl:dataset-split]].
 
 #+NAME: tbl:dataset-split
-#+CAPTION: Dataset split.
+#+CAPTION: Count of words and sentences and split ratio into training, validation, and testing sets in the Penn Treebank dataset.
 #+ATTR_LATEX: :align lrrrr
 |-------+-----------+--------+-------------+-------------|
 |       | Sentences |  Words | Sent. split | Words split |
@@ -79,12 +75,12 @@ The split ratio between the three parts is shown in table [[tbl:dataset-split]].
 | Test  |      3761 |  78669 | 7.64  %     | 7.58  %     |
 |-------+-----------+--------+-------------+-------------|
 
-Luckily validation and test sets do not contain /out-of-vocabulary (OOV) words/, this simplifies the embedding management during the problem formulation.
+Luckily, validation and test sets do not contain /out-of-vocabulary (OOV) words/, this simplifies the embedding management during the problem formulation.
 
 The $5$ most frequent words are presented in table [[tbl:most-frequent-words]] (words are shared across all three splits):
 
 #+NAME: tbl:most-frequent-words
-#+CAPTION: Most frequent words.
+#+CAPTION: Occurences of most frequent words in the Penn Treebank dataset.
 |---+-------+-------+--------------|
 |   | Word  | Count | % over total |
 |---+-------+-------+--------------|
@@ -95,12 +91,12 @@ The $5$ most frequent words are presented in table [[tbl:most-frequent-words]] (
 | 5 | to    | 27430 |          2.6 |
 |---+-------+-------+--------------|
 
-The presence of /<unk>/ and /N/ can be easily explained because they respectively represent unknown elements and digits.
+The presence of /<unk>/ and /N/ tokens can be easily explained because they respectively represent unknown elements and digits.
 
 Figure [[fig:sentence-lengths-distribution]] shows the sentence length distributions for all splits. 
 
 #+NAME: fig:sentence-lengths-distribution
-#+CAPTION: Sentence lengths distribution.
+#+CAPTION: Length distribution of all sentences in the training, validation, and testing sets of the Penn Treebank dataset.
 [[file:./assets/sentence_lengths_distribution.pdf]]
 
 The mean values are almost identical, this implies that the input length of the RNN is constant over the training, validation, and testing phases: consequentially, any operation applied on top of the train split should behave in a similar way on the others.
@@ -113,14 +109,14 @@ In order to train a RNN model some dataset manipulation is required. The impleme
 1. the original dataset is loaded from file;
 2. a /<EOS>/ token is append to each sentence to declare the end of sentence;
 3. each unique word is mapped to an integer number;
-4. in order to have sentences with equal length a custom collate function is defined, it applies a common pad value ignored during the loss computation.
+4. a custom collate function applies a common pad value, ignored during the loss computation, in order to have sentences with equal length.
 
 ** Architecture
-The baseline model is a plain LSTM structure. The forward pass is divided into a sequence of steps:
-- a list of integers representing the words in a sentence is passed as input to the model;
+The baseline model is a plain LSTM structure where the forward pass is divided into a sequence of steps:
+- a list of integers, representing the words in a sentence, is passed to the model as the input;
 - each word is mapped to a vector space using a learnable embedding layer;
-- the embedded input representing elements from $t_0$ to $t_{i-1}$ to predict $t_{i}$ is then used by the recurrent structure that takes elements;
-- finally, the output of the LSTM is fed to a fully connect layer that gives the class probability for each word.
+- the embedded input, which represents elements from $t_0$ to $t_{i-1}$, is then used to predict $t_{i}$ by the recurrent structure;
+- finally, the output of the LSTM is fed to a fully connected layer that returns the class probability for each word.
 
 Once the required PP value was reached, a Mogrifier LSTM architecture[[cite:&Melis2020Mogrifier]] was tested to boost performance. This is a enhanced version of a canonical LSTM in which the hidden element of the step $t_{i-1}$ is used as a gate for the input of step $t$.
 
@@ -129,30 +125,26 @@ From the first run it was clear that the model suffered of overfitting (figure [
 - /Learning rate scheduler/: to control the impact of a single train update by changing the learning rate dynamically, in particular a /ReduceLROnPlateau/ scheduler was used, to reduce the learning rate if no improvement in the validation loss is received within a user-defined patience;
 - /Early Stopper/: to stop the training when the validation loss starts to increase;
 - /Weights initialization/: hidden layers initialization before training;
-- /Parameter Tying/: to reduce the model complexity and finding a common representation by aggregating the embedding and classification layer;
+- /Parameter Tying/: to reduce the model complexity and finding a common representation by aggregating the embedding and classification layers;
 - /Embedding dropout/: a modified version of an embedding layer that includes dropout[fn:2];
-- /Weight dropout/: a dropout applied on the weight of a LSTM model[fn:3];
+- /Weight dropout/: a dropout applied on the weight of an LSTM model[fn:3];
 - /Locked dropout/: a layer that allows to shutdown neurons in a consistent way across repeated connections within the forward and backward pass;
 - /Gradient clipping/: to avoid /"exploding gradient"/.
 
 #+NAME: fig:baseline-overfitting
-#+CAPTION: Baseline overfitting.
+#+CAPTION: Loss w.r.t. epochs (left) and PP w.r.t epochs (right) obtained using the baseline LSTM model described in section [[Architecture]].
 [[file:../assets/baseline_lstm_overfitting.pdf]]
 
 ** Optimizer
-Three different optimizers were tested:
+The three optimizers tested, and associated impacts, are presented below:
 - /Stochastic Gradient Descent/: after many epochs it stagnates;
-- /Non-monotonically Triggered ASGD/: optimized version of SGD capable of taking mean values from SGD to reduce noise. Gives a solution closer to the optimum;
+- /Non-monotonically Triggered ASGD/: optimized version of SGD capable of taking mean values from SGD to reduce noise. It gives a solution closer to the optimum;
 - /ADAM/: reaches better result than SGD and ASGD in less time when used in combination with Mogrifier LSTM.
 
 Moreover, several tests were made also using /Truncated Back-Propagation Through Time (TBPTT)/[[cite:&https://doi.org/10.48550/arxiv.1705.08209]].
 
 [fn:2] [[https://github.com/carpedm20/ENAS-pytorch/blob/0468b8c4ddcf540c9ed6f80c27289792ff9118c9/models/shared_rnn.py#L51][embeddig dropout source]]
 [fn:3] [[https://pytorchnlp.readthedocs.io/en/latest/_modules/torchnlp/nn/weight_drop.html][weight dropout source]] 
-
-# 5. your network/algorithm (focus on your solution)
-# 6. the pipeline if used any, including tokenizer, featurizer, extractor, etc.
-# 7. your baseline and the experiments you have tried
 
 * Evaluation
 This section contains metrics used for the evaluation phase and explains different experiments.
@@ -171,7 +163,7 @@ where:
 - $N$ is the number of elements in the batch;
 - $C$ is the total number of classes.
 
-An additional metric was used to assess model performances, it is the /Per word Perplexity (PP)/ defined on top of the $CE$ loss
+Moreover, /Per word Perplexity (PP)/ was used as an additional metric to assess model performances. It is defined on top of the $CE$ loss:
 
 #+NAME: eq:perplexity
 \begin{equation}
@@ -181,74 +173,74 @@ PP(x, y) = e^{CE(\{x, y\})}
 
 The final goal is to find a set of parameters that minimizes the PP value:
 
-$$
+\begin{equation}
 \theta^{*} = \text{argmin}_{\theta} PP(X, Y)
-$$
+\end{equation}
 
 ** Results
 The first idea was to create a baseline LSTM model that can be used later to make comparisons with enhanced implementations. No technique was used to avoid overfitting, and as expected performance on the train split is higher than the one on validation split (figure [[fig:baseline-overfitting]]).
 
 The second experiment focused on regularization techniques presented in the section [[Overfitting]]. Different combinations have been tested and at the end the best result, presented in figure [[fig:lstm-all]], was obtained using all regularization tools except weight dropout.
-Even if the performance are better result with respect to the baseline, after the 50-th epoch the validation loss stops decreasing while the training one keeps improving.
+Even if the performance are better with respect to the baseline, after the 50-th epoch the validation loss stops decreasing while the training one keeps improving.
 
 #+NAME: fig:lstm-all
-#+CAPTION: LSTM with regularization.
+#+CAPTION: Loss w.r.t. epochs (left) and PP w.r.t epochs (right) obtained using the LSTM model enhanced with regularization techniques reported in section [[Overfitting]].
 [[file:../assets/lstm_all.pdf]]
 
-At first, I thought the problem was related to low model capacity, for this reason I decided to increase the depth and the size of the model. A side effect of this update was the memorization of training data directly within the model parameters. In order to overcome this consequence my next step was
-- the increase of the dropout value to avoid the new overfitting effect;
-- the increase starting learning rate which was controlled by the learning rate scheduler.
-  
-Those updates aimed to align more the validation curve to the training one. Unfortunately, from figure [[fig:lstm-all-refined]] it is possible to notice that the overfitting phenomenon was reduced but was still present.
+The depth and size of the model has been increased in order to increase the model capacity and hopefully to reduce the problem. However, a side effect of this update was the memorization of training data directly within the model parameters. Then, both the dropout and the starting learning rate values has been increased. The former to reduce the overfitting, the latter to counterbalance the slow down of the learning.
+Unfortunately, from figure [[fig:lstm-all-refined]] it is possible to notice that overfitting is still present.
 
 #+NAME: fig:lstm-all-refined
-#+CAPTION: LSTM all refined.
+#+CAPTION: Loss w.r.t. epochs (left) and PP w.r.t epochs (right) obtained using the deeper LSTM model enhanced with regularization techniques reported in section [[Overfitting]].
 [[file:../assets/lstm_all_refined.pdf]]
 
-At this point the most effective regularization techniques were used, further tests were made on top of the Mogrifier architecture with Adam as optimizer.
+At this point the most effective regularization techniques were used and further tests were made on top of the Mogrifier architecture with Adam as optimizer.
 
 #+NAME: fig:mogrifier
-#+CAPTION: Mogrifier.
+#+CAPTION: Loss w.r.t. epochs (left) and PP w.r.t epochs (right) obtained using the Mogrifier LSTM model with regularization techniques reported in section [[Overfitting]].
 [[file:../assets/mogrifier.pdf]]
 
 Figure [[fig:mogrifier]] shows how this model structure is capable of learning better and in a faster way but at the same time exhibits poor generalization capabilities.
 
-Technically speaking, the Mogrifier architecture has all elements to allow learning a good representation, capable of obtaining low perplexity values, however the overfitting phenomenon remains the main problem, even when applying regularization techniques.
+As a matter of fact, the Mogrifier architecture can learn a good representation, capable of obtaining low perplexity values. However the overfitting phenomenon remains the main problem, even when applying regularization techniques.
+
+In order to compare each tested model according to the PP value on the validation split of Penn Treebank dataset, the following table is presented:
+
+#+NAME: tbl:models-summary
+#+CAPTION: Comparison among each tested model based on PP value results obtained on validation and test splits of Penn Treebank dataset.
+|-----------------------+--------------+---------------|
+| Model                 | Val PP value | Test PP value |
+|-----------------------+--------------+---------------|
+| Baseline LSTM         |       227.56 |        235.66 |
+| LSTM + regularization |        93.62 |         93.22 |
+| Deeper LSTM + reg.    |        92.33 |         93.98 |
+| Mogrifier LSTM        |        85.77 |         86.64 |
+|-----------------------+--------------+---------------|
+
+As shown, the model with the lowest PP value is the one with the Mogrifier structure, but it is important to underline that this metric does not take into consideration the overfitting behavior. For this reason, it was chosen to use the $\texttt{LSTM + regularization}$ model to make further analysis (section [[Predictions analysis]]), since it is the model that best align the train and validation splits.
 
 ** Predictions analysis
-A more in depth analysis of the predicted words of the test split was made with respect to the LSTM model presented in figure [[fig:lstm-all]]. An element of interest was the correlation between the effectiveness of the model and the length of the sentence. It was proved that sequence models implemented using DL tends to decrease the perplexity value with long sequences. Figure [[fig:pp-sentence-len]] shows a stable behavior across words at different position in the sentence, except ones around the 60-th one.
+A more in depth analysis of the predicted words of the test split was made with respect to the $\texttt{LSTM + regularization}$ model. An element of interest was the correlation between the effectiveness of the model and the length of the sentence. Analyzing this, figure [[fig:pp-sentence-len]] shows a stable behavior across words at different position in the sentence, except ones around the 60-th one. It is well known that sequence models, implemented using DL, tend to decrease the perplexity value with long sequences. 
 
 #+NAME: fig:pp-sentence-len
-#+CAPTION: PP and sentence lengths correlation.
+#+CAPTION: PP values w.r.t. sentence lengths (left) histograms of sentence lengths (right).
 [[file:../assets/pp_sentence_length.pdf]]
 
-I think that this is not correlated to the problem previously discussed, but instead it could be a consequence of the low presence of words around that specific position as shown in the right subplot.
+Although, in this specific case, it could be a consequence of the low occurrence of words around that specific position as shown in the right subplot of figure [[fig:pp-sentence-len]].
 
 #+NAME: tbl:most-correct-words
-#+CAPTION: Most correct words.
-|-------+---------------------+-------------------|
-| Word  | Correctly predicted | Total occurrences |
-|-------+---------------------+-------------------|
-| the   |                2761 |              3968 |
-| <eos> |                2671 |              3761 |
-| <unk> |                2214 |              4606 |
-| N     |                1757 |              2494 |
-| of    |                1402 |              2182 |
-| to    |                1100 |              2024 |
-| a     |                 478 |              1739 |
-| 's    |                 434 |               903 |
-| in    |                 353 |              1470 |
-|-------+---------------------+-------------------|
-
-From table [[tbl:most-correct-words]] and [[tbl:least-correct-words]] it seems that number of correctly predicted words is correlated with total number of word occurrences. This evidence is strengthened by the fact that most occurred words are shared across dataset splits and consequentially an overfitting behavior results in good performance also in the testing phase.
-
-#+NAME: tbl:least-correct-words
-#+CAPTION: Least correct words.
+#+CAPTION: Words ranked by the correclty predicted number of times.
 |-------------+---------------------+-------------------|
 | Word        | Correctly predicted | Total occurrences |
 |-------------+---------------------+-------------------|
-| acquisition |                   1 |                16 |
-| acquire     |                   1 |                11 |
+| the         |                2761 |              3968 |
+| <eos>       |                2671 |              3761 |
+| <unk>       |                2214 |              4606 |
+| N           |                1757 |              2494 |
+| of          |                1402 |              2182 |
+| to          |                1100 |              2024 |
+| a           |                 478 |              1739 |
+| $\dots$     |             $\dots$ |           $\dots$ |
 | accounts    |                   1 |                 8 |
 | account     |                   1 |                10 |
 | acceptances |                   1 |                 1 |
@@ -258,28 +250,31 @@ From table [[tbl:most-correct-words]] and [[tbl:least-correct-words]] it seems t
 | 13th        |                   1 |                 9 |
 |-------------+---------------------+-------------------|
 
-#+NAME: tbl:greatest-accuracy-words
-#+CAPTION: Words with greatest accuracy excluding low occurrences.
-|-----------+----------+-------------------|
-| Word      | Accuracy | Total occurrences |
-|-----------+----------+-------------------|
-| jones     |    0.96% |                23 |
-| officer   |    0.94% |                36 |
-| york      |    0.90% |                71 |
-| 'm        |    0.90% |                10 |
-| breakers  |    0.88% |                 8 |
-| mac       |    0.86% |                 7 |
-| lynch     |    0.84% |                19 |
-| be        |    0.84% |               384 |
-|-----------+----------+-------------------|
+Secondly, from table [[tbl:most-correct-words]] it would seem that number of correctly predicted words is correlated with total number of word occurrences.
 
-To finally asses this hypothesis, a final experiment was made taking into account the accuracy. From table [[tbl:greatest-accuracy-words]] it is clear that words with highest accuracy are not necessarily the most frequent ones.
+However, the highest numbers of correctly predicted words are associated to the most frequent tokens in the dataset (table [[tbl:dataset-split]]). For this reason, in order to validate the previous statement, an additional experiment was made taking into account the accuracy of each word. From table [[tbl:greatest-accuracy-words]] it is clear that words with highest accuracy are not necessarily the most frequent ones.
+
+#+NAME: tbl:greatest-accuracy-words
+#+CAPTION: Words ranked by greatest accuracy.
+|----------+----------+-------------------|
+| Word     | Accuracy | Total occurrences |
+|----------+----------+-------------------|
+| jones    |      96% |                23 |
+| officer  |      94% |                36 |
+| york     |      90% |                71 |
+| 'm       |      90% |                10 |
+| breakers |      88% |                 8 | 
+| mac      |      86% |                 7 |
+| lynch    |      84% |                19 |
+| be       |      84% |               384 |
+|----------+----------+-------------------|
 
 * Conclusion
-Despite good results obtained with LSTM based models the quality observed with human evaluation is low. The predictions made during the first part of the input sequence are less qualitative accurate than the ones made at the end of the sentence. This could be explained by the fact that some initial words are required to understand and store the context inside the LSTM memory cell.
-Moreover, the prediction analysis made in section [[Predictions analysis]] does not highlight any possible pattern involved in the problem.
+In this work, two LSTM architectures have been implemented for solving the Language Modeling task, and they have been tested on the popular Penn Treebank dataset.
 
-Possible future works may be a more in-depth investigation to improve the perceived quality, or more experiments made to address the overfitting problem associated with Mogrifier LSTM.
+After many experiments the Mogrifier model has obtained the lowest PP value (86.64) on the test split. The qualitative carried out analysis has shown that a common pattern for error estimation has not be found.
+
+Possible future works may be a more in-depth investigation on the human perceived quality and more experiments made to address the overfitting problem associated with Mogrifier LSTM.
 
 #+print_bibliography:
 bibliography:/home/fedeizzo/uni/master/projects/languageModelling/report/bibliography.bib
