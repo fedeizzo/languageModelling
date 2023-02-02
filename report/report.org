@@ -220,7 +220,7 @@ In order to compare each tested model according to the PP value on the validatio
 As shown, the model with the lowest PP value is the one with the Mogrifier structure, but it is important to underline that this metric does not take into consideration the overfitting behavior. For this reason, it was chosen to use the $\texttt{LSTM + regularization}$ model to make further analysis (section [[Predictions analysis]]), since it is the model that best align the train and validation splits.
 
 ** Predictions analysis
-A more in depth analysis of the predicted words of the test split was made with respect to the $\texttt{LSTM + regularization}$ model. An element of interest was the correlation between the effectiveness of the model and the length of the sentence. Analyzing this, figure [[fig:pp-sentence-len]] shows a stable behavior across words at different position in the sentence, except ones around the 60-th one. It is well known that sequence models, implemented using DL, tend to decrease the perplexity value with long sequences. 
+A more in depth analysis of the predicted words of the test split was made with respect to the $\texttt{LSTM + regularization}$ model. An element of interest was the correlation between the effectiveness of the model and the length of the sentence. Figure [[fig:pp-sentence-len]] shows a stable behavior across words at different position in the sentence, except ones around the 60-th one. It is well known that sequence DL models fed with very long input are not able to capture all the context due to the limited size of the vector used for latent space encoding.
 
 #+NAME: fig:pp-sentence-len
 #+CAPTION: PP values w.r.t. sentence lengths (left) histograms of sentence lengths (right).
